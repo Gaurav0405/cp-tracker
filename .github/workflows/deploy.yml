@@ -7,7 +7,6 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
     steps:
     - name: Deploy to EC2
       uses: appleboy/ssh-action@master
@@ -17,10 +16,13 @@ jobs:
         key: ${{ secrets.EC2_KEY }}
         script: |
           cd ~/cp-tracker
+          git stash
           git pull origin main
           cd backend
           npm install
           cd ../frontend
           npm install
           npm run build
+          sudo chmod -R 755 ~/cp-tracker/frontend/build
           pm2 restart cp-tracker-backend
+          sudo systemctl restart nginx
