@@ -53,10 +53,12 @@ export default function Dashboard() {
   const getDifficultyColor = (d) => d === 'easy' ? '#3fb950' : d === 'medium' ? '#d29922' : '#f85149';
   const getPlatformColor = (p) => ({ leetcode: '#ffa116', codeforces: '#3b82f6', codechef: '#8b5cf6', geeksforgeeks: '#3fb950', hackerrank: '#00ea64', hackerearth: '#2c99e8' }[p] || '#58a6ff');
 
+  const isNewUser = !loadingStats && stats && stats.totalSolved === 0;
+
   return (
     <div style={s.layout}>
-      {/* Sidebar */}
-      <aside style={s.sidebar}>
+      {/* Sidebar — hidden on mobile via CSS */}
+      <aside style={s.sidebar} className="sidebar">
         <div style={s.sidebarTop}>
           <Link to="/" style={s.logo}>
             <FiZap size={18} color="#58a6ff" />
@@ -75,10 +77,10 @@ export default function Dashboard() {
         </div>
         <div style={s.sidebarBottom}>
           <div style={s.userInfo}>
-            <div style={s.avatar}>{user?.name?.[0]?.toUpperCase()}</div>
+            <div style={s.avatar}>{user && user.name ? user.name[0].toUpperCase() : 'U'}</div>
             <div>
-              <div style={s.userName}>{user?.name}</div>
-              <div style={s.userEmail}>{user?.email?.split('@')[0]}</div>
+              <div style={s.userName}>{user && user.name}</div>
+              <div style={s.userEmail}>{user && user.email ? user.email.split('@')[0] : ''}</div>
             </div>
           </div>
           <button onClick={handleLogout} style={s.logoutBtn}>
@@ -89,7 +91,7 @@ export default function Dashboard() {
       </aside>
 
       {/* Main content */}
-      <main style={s.main}>
+      <main style={s.main} className="main">
         {/* Header */}
         <div style={s.header}>
           <div>
@@ -101,27 +103,45 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* Onboarding banner for new users */}
+        {isNewUser && (
+          <div style={s.onboarding}>
+            <div style={s.onboardingIcon}>👋</div>
+            <div style={s.onboardingText}>
+              <h3 style={s.onboardingTitle}>Welcome to CP Tracker!</h3>
+              <p style={s.onboardingDesc}>Connect your coding platforms to start tracking your progress and get AI-powered problem recommendations.</p>
+            </div>
+            <Link to="/profile" style={s.onboardingBtn}>
+              Set up platforms →
+            </Link>
+          </div>
+        )}
+
         {/* Stats Cards */}
-        <div style={s.statsGrid}>
+        <div style={s.statsGrid} className="stats-grid">
           {[
-            { label: 'Total Solved', value: loadingStats ? '...' : (stats?.totalSolved || 0), sub: 'across all platforms', icon: <FiAward size={18} />, color: '#58a6ff' },
-            { label: 'LeetCode', value: loadingStats ? '...' : (stats?.stats?.leetcode?.solvedCount || 0), sub: stats?.stats?.leetcode ? `${stats.stats.leetcode.easy}E · ${stats.stats.leetcode.medium}M · ${stats.stats.leetcode.hard}H` : 'Not connected', icon: <SiLeetcode size={18} />, color: '#ffa116' },
-            { label: 'Codeforces', value: loadingStats ? '...' : (stats?.stats?.codeforces?.rating || 'N/A'), sub: stats?.stats?.codeforces?.rank || 'Not connected', icon: <SiCodeforces size={18} />, color: '#3b82f6' },
-            { label: 'HackerRank', value: loadingStats ? '...' : (stats?.stats?.hackerrank?.solvedCount || 0), sub: stats?.stats?.hackerrank ? `${stats.stats.hackerrank.badges?.length || 0} badges` : 'Not connected', icon: <FiCode size={18} />, color: '#00ea64' },
+            { label: 'Total Solved', value: loadingStats ? null : (stats && stats.totalSolved ? stats.totalSolved : 0), sub: 'across all platforms', icon: <FiAward size={18} />, color: '#58a6ff' },
+            { label: 'LeetCode', value: loadingStats ? null : (stats && stats.stats && stats.stats.leetcode ? stats.stats.leetcode.solvedCount : 0), sub: stats && stats.stats && stats.stats.leetcode ? `${stats.stats.leetcode.easy}E · ${stats.stats.leetcode.medium}M · ${stats.stats.leetcode.hard}H` : 'Not connected', icon: <SiLeetcode size={18} />, color: '#ffa116' },
+            { label: 'Codeforces', value: loadingStats ? null : (stats && stats.stats && stats.stats.codeforces ? stats.stats.codeforces.rating : 'N/A'), sub: stats && stats.stats && stats.stats.codeforces ? stats.stats.codeforces.rank : 'Not connected', icon: <SiCodeforces size={18} />, color: '#3b82f6' },
+            { label: 'HackerRank', value: loadingStats ? null : (stats && stats.stats && stats.stats.hackerrank ? stats.stats.hackerrank.solvedCount : 0), sub: stats && stats.stats && stats.stats.hackerrank ? `${stats.stats.hackerrank.badges ? stats.stats.hackerrank.badges.length : 0} badges` : 'Not connected', icon: <FiCode size={18} />, color: '#00ea64' },
           ].map((card, i) => (
             <div key={i} style={s.statCard}>
               <div style={s.statCardHeader}>
                 <span style={s.statLabel}>{card.label}</span>
                 <span style={{ color: card.color }}>{card.icon}</span>
               </div>
-              <div style={{ ...s.statValue, color: card.color }}>{card.value}</div>
+              {card.value === null ? (
+                <div style={s.skeletonValue} />
+              ) : (
+                <div style={{ ...s.statValue, color: card.color }}>{card.value}</div>
+              )}
               <div style={s.statSub}>{card.sub}</div>
             </div>
           ))}
         </div>
 
         {/* Main Grid */}
-        <div style={s.mainGrid}>
+        <div style={s.mainGrid} className="main-grid">
           {/* Today's Problems */}
           <div style={s.section}>
             <div style={s.sectionHeader}>
@@ -131,7 +151,7 @@ export default function Dashboard() {
               </div>
               {recommendations && (
                 <div style={s.weakTopics}>
-                  {recommendations.weakTopics?.slice(0, 3).map(t => (
+                  {recommendations.weakTopics && recommendations.weakTopics.slice(0, 3).map(t => (
                     <span key={t} style={s.topicTag}>{t}</span>
                   ))}
                 </div>
@@ -149,21 +169,21 @@ export default function Dashboard() {
               </div>
             ) : (
               <div style={s.problemList}>
-                {recommendations.problems?.map((item, i) => (
+                {recommendations.problems && recommendations.problems.map((item, i) => (
                   <div key={i} style={s.problemRow}>
                     <span style={s.problemNum}>{i + 1}</span>
                     <span style={{
                       ...s.platformTag,
-                      background: getPlatformColor(item.problem?.platform) + '18',
-                      color: getPlatformColor(item.problem?.platform),
-                      border: `1px solid ${getPlatformColor(item.problem?.platform)}33`
+                      background: getPlatformColor(item.problem ? item.problem.platform : '') + '18',
+                      color: getPlatformColor(item.problem ? item.problem.platform : ''),
+                      border: `1px solid ${getPlatformColor(item.problem ? item.problem.platform : '')}33`
                     }}>
-                      {item.problem?.platform?.slice(0,2).toUpperCase()}
+                      {item.problem ? item.problem.platform.slice(0,2).toUpperCase() : ''}
                     </span>
-                    <span style={s.problemTitle}>{item.problem?.title}</span>
-                    {item.problem?.cf_rating && <span style={s.cfRating}>{item.problem.cf_rating}</span>}
-                    <span style={{ ...s.diffBadge, color: getDifficultyColor(item.problem?.difficulty) }}>
-                      {item.problem?.difficulty}
+                    <span style={s.problemTitle}>{item.problem ? item.problem.title : ''}</span>
+                    {item.problem && item.problem.cf_rating && <span style={s.cfRating}>{item.problem.cf_rating}</span>}
+                    <span style={{ ...s.diffBadge, color: getDifficultyColor(item.problem ? item.problem.difficulty : '') }}>
+                      {item.problem ? item.problem.difficulty : ''}
                     </span>
                     {item.solved ? (
                       <span style={s.solvedBadge}>✓ Solved</span>
@@ -191,7 +211,7 @@ export default function Dashboard() {
               <div style={s.skeleton}>
                 {[1,2,3,4,5,6,7,8].map(i => <div key={i} style={s.skeletonRow} />)}
               </div>
-            ) : stats?.stats?.leetcode?.topicCount ? (
+            ) : stats && stats.stats && stats.stats.leetcode && stats.stats.leetcode.topicCount ? (
               <div style={s.topicList}>
                 {Object.entries(stats.stats.leetcode.topicCount)
                   .sort((a, b) => b[1] - a[1])
@@ -214,6 +234,22 @@ export default function Dashboard() {
           </div>
         </div>
       </main>
+
+      {/* Mobile bottom navigation */}
+      <div className="mobile-nav">
+        <Link to="/dashboard" style={s.mobileNavItem}>
+          <FiGrid size={20} />
+          <span style={s.mobileNavLabel}>Dashboard</span>
+        </Link>
+        <Link to="/profile" style={s.mobileNavItem}>
+          <FiUser size={20} />
+          <span style={s.mobileNavLabel}>Profile</span>
+        </Link>
+        <button onClick={handleLogout} style={{ ...s.mobileNavItem, background: 'none', border: 'none', cursor: 'pointer' }}>
+          <FiLogOut size={20} />
+          <span style={s.mobileNavLabel}>Logout</span>
+        </button>
+      </div>
     </div>
   );
 }
@@ -221,7 +257,6 @@ export default function Dashboard() {
 const s = {
   layout: { display: 'flex', minHeight: '100vh', background: '#0d1117' },
 
-  // Sidebar
   sidebar: { width: '220px', background: '#161b22', borderRight: '1px solid #21262d', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'fixed', height: '100vh', padding: '1.25rem 0' },
   sidebarTop: { padding: '0 1rem' },
   logo: { display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '2rem', padding: '0.25rem 0' },
@@ -236,22 +271,28 @@ const s = {
   userEmail: { fontSize: '0.75rem', color: '#484f58' },
   logoutBtn: { display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#8b949e', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '0.8rem', padding: '0.25rem 0' },
 
-  // Main
   main: { marginLeft: '220px', flex: 1, padding: '2rem', maxWidth: 'calc(100vw - 220px)' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' },
   headerTitle: { fontSize: '1.5rem', fontWeight: '700', color: '#f0f6fc', marginBottom: '0.25rem' },
   headerSub: { color: '#8b949e', fontSize: '0.875rem' },
   headerDate: { color: '#484f58', fontSize: '0.8rem' },
 
-  // Stats
+  // Onboarding
+  onboarding: { background: '#0d2136', border: '1px solid #1f6feb44', borderRadius: '10px', padding: '1.25rem 1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' },
+  onboardingIcon: { fontSize: '2rem', flexShrink: 0 },
+  onboardingText: { flex: 1, minWidth: '200px' },
+  onboardingTitle: { fontSize: '1rem', fontWeight: '600', color: '#f0f6fc', marginBottom: '0.3rem' },
+  onboardingDesc: { fontSize: '0.875rem', color: '#8b949e', lineHeight: '1.5' },
+  onboardingBtn: { background: '#1f6feb', color: 'white', padding: '0.625rem 1.25rem', borderRadius: '8px', fontSize: '0.875rem', fontWeight: '600', whiteSpace: 'nowrap', flexShrink: 0 },
+
   statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' },
   statCard: { background: '#161b22', border: '1px solid #21262d', borderRadius: '10px', padding: '1.25rem' },
   statCardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' },
   statLabel: { fontSize: '0.75rem', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '500' },
   statValue: { fontSize: '1.875rem', fontWeight: '700', marginBottom: '0.25rem' },
+  skeletonValue: { height: '2.5rem', width: '60%', background: 'linear-gradient(90deg, #21262d 25%, #30363d 50%, #21262d 75%)', backgroundSize: '400px 100%', animation: 'shimmer 1.5s infinite', borderRadius: '6px', marginBottom: '0.25rem' },
   statSub: { fontSize: '0.75rem', color: '#484f58' },
 
-  // Sections
   mainGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' },
   section: { background: '#161b22', border: '1px solid #21262d', borderRadius: '10px', padding: '1.5rem' },
   sectionHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' },
@@ -260,7 +301,6 @@ const s = {
   weakTopics: { display: 'flex', gap: '0.4rem', flexWrap: 'wrap', justifyContent: 'flex-end' },
   topicTag: { fontSize: '0.7rem', background: '#1f6feb18', color: '#58a6ff', padding: '0.2rem 0.5rem', borderRadius: '20px', border: '1px solid #1f6feb33' },
 
-  // Problems
   problemList: { display: 'flex', flexDirection: 'column', gap: '0.5rem' },
   problemRow: { display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.625rem 0.75rem', background: '#0d1117', borderRadius: '6px', border: '1px solid #21262d' },
   problemNum: { fontSize: '0.75rem', color: '#484f58', width: '16px', flexShrink: 0 },
@@ -271,7 +311,6 @@ const s = {
   solvedBadge: { fontSize: '0.7rem', background: '#3fb95018', color: '#3fb950', padding: '0.2rem 0.5rem', borderRadius: '4px', flexShrink: 0 },
   solveBtn: { display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', background: '#1f6feb', color: 'white', padding: '0.25rem 0.625rem', borderRadius: '4px', fontWeight: '500', flexShrink: 0 },
 
-  // Topics
   topicList: { display: 'flex', flexDirection: 'column', gap: '0.625rem' },
   topicRow: { display: 'flex', alignItems: 'center', gap: '0.75rem' },
   topicName: { fontSize: '0.775rem', color: '#8b949e', width: '140px', flexShrink: 0 },
@@ -279,8 +318,10 @@ const s = {
   bar: { height: '100%', background: 'linear-gradient(90deg, #1f6feb, #58a6ff)', borderRadius: '4px' },
   topicCount: { fontSize: '0.75rem', color: '#484f58', width: '24px', textAlign: 'right' },
 
-  // States
   skeleton: { display: 'flex', flexDirection: 'column', gap: '0.5rem' },
-  skeletonRow: { height: '44px', background: '#21262d', borderRadius: '6px', animation: 'pulse 1.5s infinite' },
+  skeletonRow: { height: '44px', borderRadius: '6px', background: 'linear-gradient(90deg, #21262d 25%, #30363d 50%, #21262d 75%)', backgroundSize: '400px 100%', animation: 'shimmer 1.5s infinite' },
   empty: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', padding: '2rem 0', color: '#484f58', fontSize: '0.875rem', textAlign: 'center' },
+
+  mobileNavItem: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem', color: '#8b949e', fontSize: '0.75rem', padding: '0.25rem 0.75rem' },
+  mobileNavLabel: { fontSize: '0.65rem' },
 };
