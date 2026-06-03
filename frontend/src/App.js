@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
+import PublicProfile from './pages/PublicProfile';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -28,6 +29,7 @@ function App() {
           <Route path="/profile" element={
             <PrivateRoute><Profile /></PrivateRoute>
           } />
+          <Route path="/u/:username" element={<PublicProfile />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

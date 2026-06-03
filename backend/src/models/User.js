@@ -7,13 +7,16 @@ const userSchema = new mongoose.Schema({
   authProvider: { type: String, enum: ['local', 'google'], default: 'local' },
   googleId: { type: String },
   handles: {
-  leetcode: { type: String, default: '' },
-  codeforces: { type: String, default: '' },
-  codechef: { type: String, default: '' },
-  geeksforgeeks: { type: String, default: '' },
-  hackerrank: { type: String, default: '' },
-  hackerearth: { type: String, default: '' },
-},
+    leetcode: { type: String, default: '' },
+    codeforces: { type: String, default: '' },
+    codechef: { type: String, default: '' },
+    geeksforgeeks: { type: String, default: '' },
+    hackerrank: { type: String, default: '' },
+    hackerearth: { type: String, default: '' },
+  },
+  streak: { type: Number, default: 0 },
+  lastActiveDate: { type: String, default: '' },
+  maxStreak: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now }
 });
 

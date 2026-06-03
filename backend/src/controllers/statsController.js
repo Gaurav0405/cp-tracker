@@ -6,27 +6,42 @@ const { getGFGData } = require('../services/gfgService');
 const { getHackerRankData } = require('../services/hackerrankService');
 const { getHackerEarthData } = require('../services/hackerEarthService');
 
-// Save user handles
 const saveHandles = async (req, res) => {
   try {
     const { leetcode, codeforces, codechef, geeksforgeeks, hackerrank, hackerearth } = req.body;
-
     const user = await User.findByIdAndUpdate(
       req.user.id,
       { handles: { leetcode, codeforces, codechef, geeksforgeeks, hackerrank, hackerearth } },
       { new: true }
     ).select('-password');
-
     res.json({ message: 'Handles saved successfully', user });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
-// Fetch unified stats from all platforms
 const getStats = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    // Update streak
+    const today = new Date().toISOString().split('T')[0];
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+
+    const currentUser = await User.findById(req.user.id);
+
+    if (currentUser.lastActiveDate === yesterday) {
+      currentUser.streak = (currentUser.streak || 0) + 1;
+    } else if (currentUser.lastActiveDate !== today) {
+      currentUser.streak = 1;
+    }
+
+    if (currentUser.streak > (currentUser.maxStreak || 0)) {
+      currentUser.maxStreak = currentUser.streak;
+    }
+
+    currentUser.lastActiveDate = today;
+    await currentUser.save();
+
+    const user = currentUser;
     const { leetcode, codeforces, codechef, geeksforgeeks, hackerrank, hackerearth } = user.handles;
 
     const results = {};
@@ -83,7 +98,6 @@ const getStats = async (req, res) => {
 
     await Promise.all(promises);
 
-    // Total solved across all platforms
     const totalSolved =
       (results.codeforces?.solvedCount || 0) +
       (results.leetcode?.solvedCount || 0) +
@@ -96,7 +110,9 @@ const getStats = async (req, res) => {
       handles: user.handles,
       stats: results,
       totalSolved,
-      errors
+      errors,
+      streak: currentUser.streak,
+      maxStreak: currentUser.maxStreak
     });
 
   } catch (error) {

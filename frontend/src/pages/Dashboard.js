@@ -1,3 +1,5 @@
+import ContestTracker from '../components/ContestTracker';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -54,10 +56,10 @@ export default function Dashboard() {
   const getPlatformColor = (p) => ({ leetcode: '#ffa116', codeforces: '#3b82f6', codechef: '#8b5cf6', geeksforgeeks: '#3fb950', hackerrank: '#00ea64', hackerearth: '#2c99e8' }[p] || '#58a6ff');
 
   const isNewUser = !loadingStats && stats && stats.totalSolved === 0;
+  const profileUsername = user && user.name ? user.name.replace(/\s+/g, '') : '';
 
   return (
     <div style={s.layout}>
-      {/* Sidebar — hidden on mobile via CSS */}
       <aside style={s.sidebar} className="sidebar">
         <div style={s.sidebarTop}>
           <Link to="/" style={s.logo}>
@@ -90,20 +92,27 @@ export default function Dashboard() {
         </div>
       </aside>
 
-      {/* Main content */}
       <main style={s.main} className="main">
-        {/* Header */}
         <div style={s.header}>
           <div>
             <h1 style={s.headerTitle}>Dashboard</h1>
             <p style={s.headerSub}>Track your competitive programming progress</p>
           </div>
-          <div style={s.headerDate}>
-            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          <div style={s.headerRight}>
+            <div style={s.headerDate}>
+              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            </div>
+            <a
+              href={`/u/${profileUsername}`}
+              target="_blank"
+              rel="noreferrer"
+              style={s.shareBtn}
+            >
+              Share Profile ↗
+            </a>
           </div>
         </div>
 
-        {/* Onboarding banner for new users */}
         {isNewUser && (
           <div style={s.onboarding}>
             <div style={s.onboardingIcon}>👋</div>
@@ -111,19 +120,17 @@ export default function Dashboard() {
               <h3 style={s.onboardingTitle}>Welcome to CP Tracker!</h3>
               <p style={s.onboardingDesc}>Connect your coding platforms to start tracking your progress and get AI-powered problem recommendations.</p>
             </div>
-            <Link to="/profile" style={s.onboardingBtn}>
-              Set up platforms →
-            </Link>
+            <Link to="/profile" style={s.onboardingBtn}>Set up platforms →</Link>
           </div>
         )}
 
-        {/* Stats Cards */}
         <div style={s.statsGrid} className="stats-grid">
           {[
             { label: 'Total Solved', value: loadingStats ? null : (stats && stats.totalSolved ? stats.totalSolved : 0), sub: 'across all platforms', icon: <FiAward size={18} />, color: '#58a6ff' },
             { label: 'LeetCode', value: loadingStats ? null : (stats && stats.stats && stats.stats.leetcode ? stats.stats.leetcode.solvedCount : 0), sub: stats && stats.stats && stats.stats.leetcode ? `${stats.stats.leetcode.easy}E · ${stats.stats.leetcode.medium}M · ${stats.stats.leetcode.hard}H` : 'Not connected', icon: <SiLeetcode size={18} />, color: '#ffa116' },
             { label: 'Codeforces', value: loadingStats ? null : (stats && stats.stats && stats.stats.codeforces ? stats.stats.codeforces.rating : 'N/A'), sub: stats && stats.stats && stats.stats.codeforces ? stats.stats.codeforces.rank : 'Not connected', icon: <SiCodeforces size={18} />, color: '#3b82f6' },
             { label: 'HackerRank', value: loadingStats ? null : (stats && stats.stats && stats.stats.hackerrank ? stats.stats.hackerrank.solvedCount : 0), sub: stats && stats.stats && stats.stats.hackerrank ? `${stats.stats.hackerrank.badges ? stats.stats.hackerrank.badges.length : 0} badges` : 'Not connected', icon: <FiCode size={18} />, color: '#00ea64' },
+            { label: 'Streak', value: loadingStats ? null : (stats && stats.streak ? stats.streak : 0), sub: `Best: ${stats && stats.maxStreak ? stats.maxStreak : 0} days`, icon: <FiZap size={18} />, color: '#f59e0b' },
           ].map((card, i) => (
             <div key={i} style={s.statCard}>
               <div style={s.statCardHeader}>
@@ -133,16 +140,16 @@ export default function Dashboard() {
               {card.value === null ? (
                 <div style={s.skeletonValue} />
               ) : (
-                <div style={{ ...s.statValue, color: card.color }}>{card.value}</div>
+                <div style={{ ...s.statValue, color: card.color }}>
+                  {card.label === 'Streak' ? `${card.value} 🔥` : card.value}
+                </div>
               )}
               <div style={s.statSub}>{card.sub}</div>
             </div>
           ))}
         </div>
 
-        {/* Main Grid */}
         <div style={s.mainGrid} className="main-grid">
-          {/* Today's Problems */}
           <div style={s.section}>
             <div style={s.sectionHeader}>
               <div>
@@ -157,7 +164,6 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
-
             {loadingRecs ? (
               <div style={s.skeleton}>
                 {[1,2,3,4,5].map(i => <div key={i} style={s.skeletonRow} />)}
@@ -198,7 +204,6 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* Topic Breakdown */}
           <div style={s.section}>
             <div style={s.sectionHeader}>
               <div>
@@ -233,9 +238,36 @@ export default function Dashboard() {
             )}
           </div>
         </div>
+
+        <div style={{marginTop: '1.25rem'}}>
+          {stats && stats.stats && stats.stats.codeforces && stats.stats.codeforces.ratingGraph && (
+            <div style={s.section}>
+              <div style={s.sectionHeader}>
+                <div>
+                  <h2 style={s.sectionTitle}>Codeforces Rating History</h2>
+                  <p style={s.sectionSub}>Your rating progression over time</p>
+                </div>
+                <span style={{fontSize: '0.875rem', color: '#3b82f6', fontWeight: '600'}}>
+                  Current: {stats.stats.codeforces.rating} ({stats.stats.codeforces.rank})
+                </span>
+              </div>
+              <ResponsiveContainer width="100%" height={200}>
+                <LineChart data={stats.stats.codeforces.ratingGraph}>
+                  <XAxis dataKey="contestName" tick={false} axisLine={{ stroke: '#21262d' }} />
+                  <YAxis tick={{ fill: '#484f58', fontSize: 11 }} axisLine={{ stroke: '#21262d' }} tickLine={false} width={40} />
+                  <Tooltip contentStyle={{ background: '#161b22', border: '1px solid #30363d', borderRadius: '8px', color: '#e6edf3' }} labelStyle={{ color: '#8b949e', fontSize: '0.75rem' }} formatter={(value) => [value, 'Rating']} />
+                  <Line type="monotone" dataKey="rating" stroke="#3b82f6" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: '#3b82f6' }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+
+        <div style={{marginTop: '1.25rem'}}>
+          <ContestTracker />
+        </div>
       </main>
 
-      {/* Mobile bottom navigation */}
       <div className="mobile-nav">
         <Link to="/dashboard" style={s.mobileNavItem}>
           <FiGrid size={20} />
@@ -256,7 +288,6 @@ export default function Dashboard() {
 
 const s = {
   layout: { display: 'flex', minHeight: '100vh', background: '#0d1117' },
-
   sidebar: { width: '220px', background: '#161b22', borderRight: '1px solid #21262d', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'fixed', height: '100vh', padding: '1.25rem 0' },
   sidebarTop: { padding: '0 1rem' },
   logo: { display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '2rem', padding: '0.25rem 0' },
@@ -270,29 +301,26 @@ const s = {
   userName: { fontSize: '0.8rem', fontWeight: '600', color: '#e6edf3' },
   userEmail: { fontSize: '0.75rem', color: '#484f58' },
   logoutBtn: { display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#8b949e', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '0.8rem', padding: '0.25rem 0' },
-
   main: { marginLeft: '220px', flex: 1, padding: '2rem', maxWidth: 'calc(100vw - 220px)' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' },
   headerTitle: { fontSize: '1.5rem', fontWeight: '700', color: '#f0f6fc', marginBottom: '0.25rem' },
   headerSub: { color: '#8b949e', fontSize: '0.875rem' },
+  headerRight: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' },
   headerDate: { color: '#484f58', fontSize: '0.8rem' },
-
-  // Onboarding
+  shareBtn: { fontSize: '0.8rem', color: '#58a6ff', border: '1px solid #1f6feb44', padding: '0.4rem 0.875rem', borderRadius: '6px', background: '#1f6feb11' },
   onboarding: { background: '#0d2136', border: '1px solid #1f6feb44', borderRadius: '10px', padding: '1.25rem 1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' },
   onboardingIcon: { fontSize: '2rem', flexShrink: 0 },
   onboardingText: { flex: 1, minWidth: '200px' },
   onboardingTitle: { fontSize: '1rem', fontWeight: '600', color: '#f0f6fc', marginBottom: '0.3rem' },
   onboardingDesc: { fontSize: '0.875rem', color: '#8b949e', lineHeight: '1.5' },
   onboardingBtn: { background: '#1f6feb', color: 'white', padding: '0.625rem 1.25rem', borderRadius: '8px', fontSize: '0.875rem', fontWeight: '600', whiteSpace: 'nowrap', flexShrink: 0 },
-
-  statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' },
+  statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1rem', marginBottom: '1.5rem' },
   statCard: { background: '#161b22', border: '1px solid #21262d', borderRadius: '10px', padding: '1.25rem' },
   statCardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' },
   statLabel: { fontSize: '0.75rem', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '500' },
   statValue: { fontSize: '1.875rem', fontWeight: '700', marginBottom: '0.25rem' },
   skeletonValue: { height: '2.5rem', width: '60%', background: 'linear-gradient(90deg, #21262d 25%, #30363d 50%, #21262d 75%)', backgroundSize: '400px 100%', animation: 'shimmer 1.5s infinite', borderRadius: '6px', marginBottom: '0.25rem' },
   statSub: { fontSize: '0.75rem', color: '#484f58' },
-
   mainGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' },
   section: { background: '#161b22', border: '1px solid #21262d', borderRadius: '10px', padding: '1.5rem' },
   sectionHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' },
@@ -300,7 +328,6 @@ const s = {
   sectionSub: { fontSize: '0.75rem', color: '#484f58' },
   weakTopics: { display: 'flex', gap: '0.4rem', flexWrap: 'wrap', justifyContent: 'flex-end' },
   topicTag: { fontSize: '0.7rem', background: '#1f6feb18', color: '#58a6ff', padding: '0.2rem 0.5rem', borderRadius: '20px', border: '1px solid #1f6feb33' },
-
   problemList: { display: 'flex', flexDirection: 'column', gap: '0.5rem' },
   problemRow: { display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.625rem 0.75rem', background: '#0d1117', borderRadius: '6px', border: '1px solid #21262d' },
   problemNum: { fontSize: '0.75rem', color: '#484f58', width: '16px', flexShrink: 0 },
@@ -310,18 +337,15 @@ const s = {
   diffBadge: { fontSize: '0.75rem', fontWeight: '500', textTransform: 'capitalize', flexShrink: 0 },
   solvedBadge: { fontSize: '0.7rem', background: '#3fb95018', color: '#3fb950', padding: '0.2rem 0.5rem', borderRadius: '4px', flexShrink: 0 },
   solveBtn: { display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', background: '#1f6feb', color: 'white', padding: '0.25rem 0.625rem', borderRadius: '4px', fontWeight: '500', flexShrink: 0 },
-
   topicList: { display: 'flex', flexDirection: 'column', gap: '0.625rem' },
   topicRow: { display: 'flex', alignItems: 'center', gap: '0.75rem' },
   topicName: { fontSize: '0.775rem', color: '#8b949e', width: '140px', flexShrink: 0 },
   barWrap: { flex: 1, background: '#21262d', borderRadius: '4px', height: '5px', overflow: 'hidden' },
   bar: { height: '100%', background: 'linear-gradient(90deg, #1f6feb, #58a6ff)', borderRadius: '4px' },
   topicCount: { fontSize: '0.75rem', color: '#484f58', width: '24px', textAlign: 'right' },
-
   skeleton: { display: 'flex', flexDirection: 'column', gap: '0.5rem' },
   skeletonRow: { height: '44px', borderRadius: '6px', background: 'linear-gradient(90deg, #21262d 25%, #30363d 50%, #21262d 75%)', backgroundSize: '400px 100%', animation: 'shimmer 1.5s infinite' },
   empty: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', padding: '2rem 0', color: '#484f58', fontSize: '0.875rem', textAlign: 'center' },
-
   mobileNavItem: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem', color: '#8b949e', fontSize: '0.75rem', padding: '0.25rem 0.75rem' },
   mobileNavLabel: { fontSize: '0.65rem' },
 };
