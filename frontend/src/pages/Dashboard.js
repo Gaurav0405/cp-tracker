@@ -1,4 +1,11 @@
 import ContestTracker from '../components/ContestTracker';
+import FriendLeaderboard from '../components/FriendLeaderboard';
+import DifficultyRings from '../components/DifficultyRings';
+import ActivityFeed from '../components/ActivityFeed';
+import ErrorBoundary from '../components/ErrorBoundary';
+import WeeklyProgress from '../components/WeeklyProgress';
+import ProblemSearch from '../components/ProblemSearch';
+import RecentSolved from '../components/RecentSolved';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
@@ -12,16 +19,19 @@ import {
 import { SiLeetcode, SiCodeforces } from 'react-icons/si';
 
 export default function Dashboard() {
-  const { user, logout } = useAuth();
+  const { user, logout, theme, toggleTheme } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [recommendations, setRecommendations] = useState(null);
   const [loadingStats, setLoadingStats] = useState(true);
   const [loadingRecs, setLoadingRecs] = useState(true);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     fetchStats();
     fetchRecommendations();
+    const interval = setInterval(() => { fetchStats(); }, 30 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
 
   const fetchStats = async () => {
@@ -48,8 +58,34 @@ export default function Dashboard() {
   };
 
   const handleLogout = () => {
-    logout();
-    navigate('/login');
+    if (window.confirm('Are you sure you want to logout?')) {
+      logout();
+      navigate('/login');
+    }
+  };
+
+  const handleMarkSolved = async (problemId, index) => {
+    try {
+      const res = await api.post('/recommendations/solved', { problemId });
+      setRecommendations(prev => ({
+        ...prev,
+        problems: prev.problems.map((item, i) =>
+          i === index ? { ...item, solved: res.data.solved } : item
+        )
+      }));
+      toast.success(res.data.message);
+    } catch (err) {
+      toast.error('Failed to update');
+    }
+  };
+
+  const copyProfileLink = () => {
+    const url = `https://buildmyresumes.online/u/${profileUsername}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      toast.success('Profile link copied!');
+      setTimeout(() => setCopied(false), 2000);
+    });
   };
 
   const getDifficultyColor = (d) => d === 'easy' ? '#3fb950' : d === 'medium' ? '#d29922' : '#f85149';
@@ -79,7 +115,11 @@ export default function Dashboard() {
         </div>
         <div style={s.sidebarBottom}>
           <div style={s.userInfo}>
-            <div style={s.avatar}>{user && user.name ? user.name[0].toUpperCase() : 'U'}</div>
+            {user && user.avatar ? (
+              <img src={user.avatar} alt="avatar" style={s.avatarImg} />
+            ) : (
+              <div style={s.avatar}>{user && user.name ? user.name[0].toUpperCase() : 'U'}</div>
+            )}
             <div>
               <div style={s.userName}>{user && user.name}</div>
               <div style={s.userEmail}>{user && user.email ? user.email.split('@')[0] : ''}</div>
@@ -102,14 +142,18 @@ export default function Dashboard() {
             <div style={s.headerDate}>
               {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
             </div>
-            <a
-              href={`/u/${profileUsername}`}
-              target="_blank"
-              rel="noreferrer"
-              style={s.shareBtn}
-            >
-              Share Profile ↗
-            </a>
+            <div style={s.headerActions}>
+              <button onClick={toggleTheme} style={s.themeBtn} title="Toggle theme">
+                {theme === 'dark' ? '☀️' : '🌙'}
+              </button>
+              <button onClick={fetchStats} style={s.refreshBtn} title="Refresh stats">🔄</button>
+              <button onClick={copyProfileLink} style={s.copyBtn}>
+                {copied ? '✅ Copied!' : '🔗 Copy Profile'}
+              </button>
+              <a href={`/u/${profileUsername}`} target="_blank" rel="noreferrer" style={s.shareBtn}>
+                Share ↗
+              </a>
+            </div>
           </div>
         </div>
 
@@ -186,17 +230,31 @@ export default function Dashboard() {
                     }}>
                       {item.problem ? item.problem.platform.slice(0,2).toUpperCase() : ''}
                     </span>
-                    <span style={s.problemTitle}>{item.problem ? item.problem.title : ''}</span>
+                    <div style={s.problemInfo}>
+                      <span style={s.problemTitle}>{item.problem ? item.problem.title : ''}</span>
+                      {item.problem && item.problem.tags && item.problem.tags.length > 0 && (
+                        <div style={s.problemTags}>
+                          {item.problem.tags.slice(0, 2).map(tag => (
+                            <span key={tag} style={s.problemTag}>{tag}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     {item.problem && item.problem.cf_rating && <span style={s.cfRating}>{item.problem.cf_rating}</span>}
                     <span style={{ ...s.diffBadge, color: getDifficultyColor(item.problem ? item.problem.difficulty : '') }}>
                       {item.problem ? item.problem.difficulty : ''}
                     </span>
                     {item.solved ? (
-                      <span style={s.solvedBadge}>✓ Solved</span>
+                      <button onClick={() => handleMarkSolved(item.problem._id, i)} style={s.solvedBadge}>
+                        ✓ Solved
+                      </button>
                     ) : (
-                      <a href={item.problem ? item.problem.url : '#'} target="_blank" rel="noreferrer" style={s.solveBtn}>
-                        Solve <FiExternalLink size={12} />
-                      </a>
+                      <div style={s.problemActions}>
+                        <button onClick={() => handleMarkSolved(item.problem._id, i)} style={s.markSolvedBtn} title="Mark as solved">✓</button>
+                        <a href={item.problem ? item.problem.url : '#'} target="_blank" rel="noreferrer" style={s.solveBtn}>
+                          Solve <FiExternalLink size={12} />
+                        </a>
+                      </div>
                     )}
                   </div>
                 ))}
@@ -239,32 +297,66 @@ export default function Dashboard() {
           </div>
         </div>
 
+        <div style={{...s.mainGrid, marginTop: '1.25rem'}} className="main-grid">
+          <ErrorBoundary fallback="Difficulty breakdown failed to load">
+            <DifficultyRings leetcode={stats && stats.stats ? stats.stats.leetcode : null} />
+          </ErrorBoundary>
+          <ErrorBoundary fallback="Activity feed failed to load">
+            <ActivityFeed stats={stats} recommendations={recommendations} />
+          </ErrorBoundary>
+        </div>
+
         <div style={{marginTop: '1.25rem'}}>
           {stats && stats.stats && stats.stats.codeforces && stats.stats.codeforces.ratingGraph && (
-            <div style={s.section}>
-              <div style={s.sectionHeader}>
-                <div>
-                  <h2 style={s.sectionTitle}>Codeforces Rating History</h2>
-                  <p style={s.sectionSub}>Your rating progression over time</p>
+            <ErrorBoundary fallback="Rating graph failed to load">
+              <div style={s.section}>
+                <div style={s.sectionHeader}>
+                  <div>
+                    <h2 style={s.sectionTitle}>Codeforces Rating History</h2>
+                    <p style={s.sectionSub}>Your rating progression over time</p>
+                  </div>
+                  <span style={{fontSize: '0.875rem', color: '#3b82f6', fontWeight: '600'}}>
+                    Current: {stats.stats.codeforces.rating} ({stats.stats.codeforces.rank})
+                  </span>
                 </div>
-                <span style={{fontSize: '0.875rem', color: '#3b82f6', fontWeight: '600'}}>
-                  Current: {stats.stats.codeforces.rating} ({stats.stats.codeforces.rank})
-                </span>
+                <ResponsiveContainer width="100%" height={200}>
+                  <LineChart data={stats.stats.codeforces.ratingGraph}>
+                    <XAxis dataKey="contestName" tick={false} axisLine={{ stroke: '#21262d' }} />
+                    <YAxis tick={{ fill: '#484f58', fontSize: 11 }} axisLine={{ stroke: '#21262d' }} tickLine={false} width={40} />
+                    <Tooltip contentStyle={{ background: '#161b22', border: '1px solid #30363d', borderRadius: '8px', color: '#e6edf3' }} labelStyle={{ color: '#8b949e', fontSize: '0.75rem' }} formatter={(value) => [value, 'Rating']} />
+                    <Line type="monotone" dataKey="rating" stroke="#3b82f6" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: '#3b82f6' }} />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
-              <ResponsiveContainer width="100%" height={200}>
-                <LineChart data={stats.stats.codeforces.ratingGraph}>
-                  <XAxis dataKey="contestName" tick={false} axisLine={{ stroke: '#21262d' }} />
-                  <YAxis tick={{ fill: '#484f58', fontSize: 11 }} axisLine={{ stroke: '#21262d' }} tickLine={false} width={40} />
-                  <Tooltip contentStyle={{ background: '#161b22', border: '1px solid #30363d', borderRadius: '8px', color: '#e6edf3' }} labelStyle={{ color: '#8b949e', fontSize: '0.75rem' }} formatter={(value) => [value, 'Rating']} />
-                  <Line type="monotone" dataKey="rating" stroke="#3b82f6" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: '#3b82f6' }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+            </ErrorBoundary>
           )}
         </div>
 
         <div style={{marginTop: '1.25rem'}}>
-          <ContestTracker />
+          <ErrorBoundary fallback="Contest tracker failed to load">
+            <ContestTracker />
+          </ErrorBoundary>
+        </div>
+
+        <div style={{marginTop: '1.25rem'}}>
+          <ErrorBoundary fallback="Leaderboard failed to load">
+            <FriendLeaderboard />
+          </ErrorBoundary>
+        </div>
+
+        <div style={{...s.mainGrid, marginTop: '1.25rem'}} className="main-grid">
+          <ErrorBoundary fallback="Weekly progress failed to load">
+            <WeeklyProgress stats={stats} recommendations={recommendations} />
+          </ErrorBoundary>
+          <ErrorBoundary fallback="Recent solved failed to load">
+            <RecentSolved cfHandle={stats && stats.handles ? stats.handles.codeforces : null} />
+          </ErrorBoundary>
+        </div>
+
+        <div style={{marginTop: '1.25rem', marginBottom: '2rem'}}>
+          <ErrorBoundary fallback="Problem search failed to load">
+            <ProblemSearch />
+          </ErrorBoundary>
         </div>
       </main>
 
@@ -298,6 +390,7 @@ const s = {
   sidebarBottom: { padding: '0 1rem', borderTop: '1px solid #21262d', paddingTop: '1rem' },
   userInfo: { display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' },
   avatar: { width: '32px', height: '32px', borderRadius: '50%', background: '#1f6feb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.875rem', fontWeight: '600', color: 'white', flexShrink: 0 },
+  avatarImg: { width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 },
   userName: { fontSize: '0.8rem', fontWeight: '600', color: '#e6edf3' },
   userEmail: { fontSize: '0.75rem', color: '#484f58' },
   logoutBtn: { display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#8b949e', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '0.8rem', padding: '0.25rem 0' },
@@ -307,6 +400,10 @@ const s = {
   headerSub: { color: '#8b949e', fontSize: '0.875rem' },
   headerRight: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' },
   headerDate: { color: '#484f58', fontSize: '0.8rem' },
+  headerActions: { display: 'flex', alignItems: 'center', gap: '0.5rem' },
+  themeBtn: { background: 'transparent', border: '1px solid #21262d', borderRadius: '6px', padding: '0.4rem 0.5rem', cursor: 'pointer', fontSize: '0.875rem' },
+  refreshBtn: { background: 'transparent', border: '1px solid #21262d', borderRadius: '6px', padding: '0.4rem 0.5rem', cursor: 'pointer', fontSize: '0.875rem' },
+  copyBtn: { fontSize: '0.8rem', color: '#8b949e', border: '1px solid #21262d', padding: '0.4rem 0.875rem', borderRadius: '6px', background: 'transparent', cursor: 'pointer' },
   shareBtn: { fontSize: '0.8rem', color: '#58a6ff', border: '1px solid #1f6feb44', padding: '0.4rem 0.875rem', borderRadius: '6px', background: '#1f6feb11' },
   onboarding: { background: '#0d2136', border: '1px solid #1f6feb44', borderRadius: '10px', padding: '1.25rem 1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' },
   onboardingIcon: { fontSize: '2rem', flexShrink: 0 },
@@ -332,10 +429,15 @@ const s = {
   problemRow: { display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.625rem 0.75rem', background: '#0d1117', borderRadius: '6px', border: '1px solid #21262d' },
   problemNum: { fontSize: '0.75rem', color: '#484f58', width: '16px', flexShrink: 0 },
   platformTag: { fontSize: '0.65rem', fontWeight: '700', padding: '0.15rem 0.4rem', borderRadius: '3px', flexShrink: 0 },
-  problemTitle: { fontSize: '0.825rem', color: '#c9d1d9', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+  problemInfo: { flex: 1, minWidth: 0 },
+  problemTitle: { fontSize: '0.825rem', color: '#c9d1d9', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+  problemTags: { display: 'flex', gap: '0.25rem', marginTop: '0.2rem', flexWrap: 'wrap' },
+  problemTag: { fontSize: '0.6rem', background: '#21262d', color: '#484f58', padding: '0.1rem 0.35rem', borderRadius: '3px' },
   cfRating: { fontSize: '0.7rem', color: '#484f58', flexShrink: 0 },
   diffBadge: { fontSize: '0.75rem', fontWeight: '500', textTransform: 'capitalize', flexShrink: 0 },
-  solvedBadge: { fontSize: '0.7rem', background: '#3fb95018', color: '#3fb950', padding: '0.2rem 0.5rem', borderRadius: '4px', flexShrink: 0 },
+  solvedBadge: { fontSize: '0.7rem', background: '#3fb95018', color: '#3fb950', padding: '0.2rem 0.5rem', borderRadius: '4px', flexShrink: 0, border: '1px solid #3fb95033', cursor: 'pointer' },
+  problemActions: { display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 },
+  markSolvedBtn: { background: '#3fb95018', color: '#3fb950', border: '1px solid #3fb95033', borderRadius: '4px', padding: '0.25rem 0.4rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: '600' },
   solveBtn: { display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', background: '#1f6feb', color: 'white', padding: '0.25rem 0.625rem', borderRadius: '4px', fontWeight: '500', flexShrink: 0 },
   topicList: { display: 'flex', flexDirection: 'column', gap: '0.625rem' },
   topicRow: { display: 'flex', alignItems: 'center', gap: '0.75rem' },

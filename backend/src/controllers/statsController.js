@@ -22,7 +22,6 @@ const saveHandles = async (req, res) => {
 
 const getStats = async (req, res) => {
   try {
-    // Update streak
     const today = new Date().toISOString().split('T')[0];
     const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
 
@@ -39,7 +38,6 @@ const getStats = async (req, res) => {
     }
 
     currentUser.lastActiveDate = today;
-    await currentUser.save();
 
     const user = currentUser;
     const { leetcode, codeforces, codechef, geeksforgeeks, hackerrank, hackerearth } = user.handles;
@@ -55,7 +53,6 @@ const getStats = async (req, res) => {
           .catch(err => { errors.codeforces = err.message; })
       );
     }
-
     if (leetcode) {
       promises.push(
         getLeetcodeData(leetcode)
@@ -63,7 +60,6 @@ const getStats = async (req, res) => {
           .catch(err => { errors.leetcode = err.message; })
       );
     }
-
     if (codechef) {
       promises.push(
         getCodechefData(codechef)
@@ -71,7 +67,6 @@ const getStats = async (req, res) => {
           .catch(err => { errors.codechef = err.message; })
       );
     }
-
     if (geeksforgeeks) {
       promises.push(
         getGFGData(geeksforgeeks)
@@ -79,7 +74,6 @@ const getStats = async (req, res) => {
           .catch(err => { errors.geeksforgeeks = err.message; })
       );
     }
-
     if (hackerrank) {
       promises.push(
         getHackerRankData(hackerrank)
@@ -87,7 +81,6 @@ const getStats = async (req, res) => {
           .catch(err => { errors.hackerrank = err.message; })
       );
     }
-
     if (hackerearth) {
       promises.push(
         getHackerEarthData(hackerearth)
@@ -105,6 +98,10 @@ const getStats = async (req, res) => {
       (results.geeksforgeeks?.solvedCount || 0) +
       (results.hackerrank?.solvedCount || 0) +
       (results.hackerearth?.solvedCount || 0);
+
+    // Save totalSolved to user for leaderboard
+    currentUser.totalSolved = totalSolved;
+    await currentUser.save();
 
     res.json({
       handles: user.handles,

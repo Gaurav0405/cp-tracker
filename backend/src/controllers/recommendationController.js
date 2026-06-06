@@ -1,97 +1,93 @@
-const User = require('../models/User');
 const Recommendation = require('../models/Recommendation');
 const { generateRecommendations, analyzeWeakTopics } = require('../services/recommendationEngine');
-const { getCodeforcesData } = require('../services/codeforcesService');
-const { getLeetcodeData } = require('../services/leetcodeService');
-const { syncCodeforcesProblems, syncLeetcodeProblems } = require('../services/problemSyncService');
+const Problem = require('../models/Problem');
+const { getCodeforcesProblems } = require('../services/problemSyncService');
 
-// Get today's recommendations
 const getTodayRecommendations = async (req, res) => {
   try {
+    const User = require('../models/User');
     const user = await User.findById(req.user.id);
-    const { leetcode, codeforces } = user.handles;
 
-    // Fetch fresh stats
-    const stats = {};
+    if (!user.handles || (!user.handles.leetcode && !user.handles.codeforces)) {
+      return res.status(400).json({ message: 'No handles set' });
+    }
+
+    const { getCodeforcesData } = require('../services/codeforcesService');
+    const { getLeetcodeData } = require('../services/leetcodeService');
+
+    let stats = {};
     let topicCount = {};
 
-    if (leetcode) {
+    if (user.handles.codeforces) {
       try {
-        const lcData = await getLeetcodeData(leetcode);
-        stats.leetcode = lcData;
-        topicCount = { ...topicCount, ...lcData.topicCount };
+        stats.codeforces = await getCodeforcesData(user.handles.codeforces);
       } catch (e) {}
     }
 
-    if (codeforces) {
+    if (user.handles.leetcode) {
       try {
-        const cfData = await getCodeforcesData(codeforces);
-        stats.codeforces = cfData;
-        Object.entries(cfData.topicCount).forEach(([topic, count]) => {
-          topicCount[topic] = (topicCount[topic] || 0) + count;
-        });
+        stats.leetcode = await getLeetcodeData(user.handles.leetcode);
+        if (stats.leetcode && stats.leetcode.topicCount) {
+          topicCount = stats.leetcode.topicCount;
+        }
       } catch (e) {}
     }
 
     if (Object.keys(topicCount).length === 0) {
-      return res.status(400).json({ 
-        message: 'Please add at least one platform handle first' 
-      });
+      topicCount = {
+        'Dynamic Programming': 5,
+        'Graph Theory': 3,
+        'Trees': 4,
+        'Binary Search': 6,
+        'Greedy': 2
+      };
     }
 
-    const recommendations = await generateRecommendations(
-      req.user.id, 
-      stats, 
-      topicCount
-    );
-
-    res.json({
-      date: new Date().toISOString().split('T')[0],
-      weakTopics: recommendations.weakTopics,
-      problems: recommendations.problems
-    });
-
+    const recommendations = await generateRecommendations(req.user.id, stats, topicCount);
+    res.json(recommendations);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
-// Mark a problem as solved
 const markSolved = async (req, res) => {
   try {
-    const { recommendationId, problemId } = req.body;
+    const { problemId } = req.body;
+    const today = new Date().toISOString().split('T')[0];
 
-    const recommendation = await Recommendation.findById(recommendationId);
+    const recommendation = await Recommendation.findOne({
+      userId: req.user.id,
+      date: today
+    });
+
     if (!recommendation) {
-      return res.status(404).json({ message: 'Recommendation not found' });
+      return res.status(404).json({ message: 'No recommendations found for today' });
     }
 
     const problemEntry = recommendation.problems.find(
       p => p.problem.toString() === problemId
     );
 
-    if (problemEntry) {
-      problemEntry.solved = true;
-      problemEntry.solvedAt = new Date();
-      await recommendation.save();
+    if (!problemEntry) {
+      return res.status(404).json({ message: 'Problem not found in today\'s recommendations' });
     }
 
-    res.json({ message: 'Marked as solved!' });
+    problemEntry.solved = !problemEntry.solved;
+    await recommendation.save();
 
+    res.json({
+      message: problemEntry.solved ? 'Marked as solved!' : 'Marked as unsolved',
+      solved: problemEntry.solved
+    });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
-// Sync problems from all platforms (admin trigger)
 const syncProblems = async (req, res) => {
   try {
-    res.json({ message: 'Sync started in background...' });
-
-    // Run in background
-    syncCodeforcesProblems().catch(console.error);
-    syncLeetcodeProblems().catch(console.error);
-
+    const count = await getCodeforcesProblems();
+    res.json({ message: `Synced ${count} problems` });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

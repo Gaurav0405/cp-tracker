@@ -17,6 +17,9 @@ const userSchema = new mongoose.Schema({
   streak: { type: Number, default: 0 },
   lastActiveDate: { type: String, default: '' },
   maxStreak: { type: Number, default: 0 },
+  friends: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  totalSolved: { type: Number, default: 0 },
+  avatar: { type: String, default: '' },
   createdAt: { type: Date, default: Date.now }
 });
 

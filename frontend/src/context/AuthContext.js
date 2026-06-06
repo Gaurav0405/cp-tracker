@@ -8,6 +8,7 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -17,6 +18,16 @@ export const AuthProvider = ({ children }) => {
     }
     setLoading(false);
   }, []);
+
+  useEffect(() => {
+    document.body.className = theme;
+  }, [theme]);
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+  };
 
   const login = async (email, password) => {
     const res = await api.post('/auth/login', { email, password });
@@ -37,13 +48,11 @@ export const AuthProvider = ({ children }) => {
   const loginWithGoogle = async () => {
     const result = await signInWithPopup(auth, googleProvider);
     const { displayName, email } = result.user;
-
     const res = await api.post('/auth/google', {
       googleId: result.user.uid,
       email,
       name: displayName
     });
-
     localStorage.setItem('token', res.data.token);
     localStorage.setItem('user', JSON.stringify(res.data.user));
     setUser(res.data.user);
@@ -57,7 +66,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, loginWithGoogle, loading }}>
+    <AuthContext.Provider value={{ user, login, register, logout, loginWithGoogle, loading, theme, toggleTheme }}>
       {children}
     </AuthContext.Provider>
   );
