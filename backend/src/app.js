@@ -12,6 +12,7 @@ app.use(cors({
   origin: ['http://localhost:3000', 'https://buildmyresumes.online', 'http://buildmyresumes.online'],
   credentials: true
 }));
+
 app.use(express.json({ limit: '2mb' }));
 
 app.use('/api/auth', authRoutes);
