@@ -16,6 +16,7 @@ export default function FriendLeaderboard() {
     fetchLeaderboard();
   }, []);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (searchQuery.length >= 2) {
       const timer = setTimeout(() => searchUsers(), 500);
