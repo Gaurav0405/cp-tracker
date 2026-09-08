@@ -13,6 +13,7 @@ app.use(cors({
     'http://localhost:3000',
     'https://buildmyresumes.online',
     'http://buildmyresumes.online',
+    'https://www.buildmyresumes.online',
     'https://cp-tracker-chi.vercel.app',
     'https://cp-tracker-git-main-gj0405.vercel.app'
   ],
