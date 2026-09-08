@@ -3,7 +3,7 @@ import axios from 'axios';
 const api = axios.create({
   baseURL: window.location.hostname === 'localhost'
     ? 'http://localhost:5000/api'
-    : '/api'
+    : 'https://cp-tracker-backend-4nrv.onrender.com/api'
 });
 
 api.interceptors.request.use((config) => {
