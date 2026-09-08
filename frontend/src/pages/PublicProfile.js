@@ -10,14 +10,12 @@ export default function PublicProfile() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
- // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    fetchProfile();
-  }, [username]);
-
-  const fetchProfile = async () => {
+ useEffect(() => {
+  const fetch = async () => {
     try {
-      const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const baseURL = window.location.hostname === 'localhost'
+        ? 'http://localhost:5000/api'
+        : 'https://cp-tracker-backend-4nrv.onrender.com/api';
       const res = await axios.get(`${baseURL}/user/public/${username}`);
       setProfile(res.data);
     } catch (err) {
@@ -26,6 +24,8 @@ export default function PublicProfile() {
       setLoading(false);
     }
   };
+  fetch();
+}, [username]);
 
   const platforms = [
     { key: 'leetcode', label: 'LeetCode', color: '#ffa116', icon: <SiLeetcode size={16} />, url: 'https://leetcode.com/' },
