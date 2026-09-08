@@ -10,7 +10,7 @@ export default function PublicProfile() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+ // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchProfile();
   }, [username]);
