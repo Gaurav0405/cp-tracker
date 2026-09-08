@@ -9,7 +9,13 @@ const problemRoutes = require('./routes/problemRoutes');
 const app = express();
 
 app.use(cors({
-  origin: ['http://localhost:3000', 'https://buildmyresumes.online', 'http://buildmyresumes.online'],
+  origin: [
+    'http://localhost:3000',
+    'https://buildmyresumes.online',
+    'http://buildmyresumes.online',
+    'https://cp-tracker-chi.vercel.app',
+    'https://cp-tracker-git-main-gj0405.vercel.app'
+  ],
   credentials: true
 }));
 
