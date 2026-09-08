@@ -16,10 +16,19 @@ export default function FriendLeaderboard() {
     fetchLeaderboard();
   }, []);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
+    useEffect(() => {
     if (searchQuery.length >= 2) {
-      const timer = setTimeout(() => searchUsers(), 500);
+      const timer = setTimeout(async () => {
+        setSearching(true);
+        try {
+          const res = await api.get(`/friends/search?q=${searchQuery}`);
+          setSearchResults(res.data);
+        } catch (err) {
+          console.error('Search failed');
+        } finally {
+          setSearching(false);
+        }
+      }, 500);
       return () => clearTimeout(timer);
     } else {
       setSearchResults([]);
@@ -38,17 +47,6 @@ export default function FriendLeaderboard() {
     }
   };
 
-  const searchUsers = async () => {
-    setSearching(true);
-    try {
-      const res = await api.get(`/friends/search?q=${searchQuery}`);
-      setSearchResults(res.data);
-    } catch (err) {
-      console.error('Search failed');
-    } finally {
-      setSearching(false);
-    }
-  };
 
   const addFriend = async (friendId, name) => {
     try {
