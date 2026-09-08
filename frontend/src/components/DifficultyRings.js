@@ -1,4 +1,3 @@
-import { useEffect, useRef } from 'react';
 
 function Ring({ percentage, color, size = 80, strokeWidth = 6, label, value }) {
   const radius = (size - strokeWidth) / 2;
