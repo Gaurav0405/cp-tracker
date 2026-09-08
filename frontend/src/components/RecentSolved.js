@@ -6,41 +6,42 @@ export default function RecentSolved({ cfHandle }) {
   const [problems, setProblems] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (cfHandle) fetchRecentSolved();
-    else setLoading(false);
-  }, [cfHandle]);
-
-  const fetchRecentSolved = async () => {
-    try {
-      const res = await axios.get(
-        `https://codeforces.com/api/user.status?handle=${cfHandle}&from=1&count=10`
-      );
-      const accepted = res.data.result
-        .filter(s => s.verdict === 'OK')
-        .reduce((acc, s) => {
-          const key = `${s.problem.contestId}-${s.problem.index}`;
-          if (!acc.find(p => p.key === key)) {
-            acc.push({
-              key,
-              name: s.problem.name,
-              rating: s.problem.rating,
-              tags: s.problem.tags,
-              url: `https://codeforces.com/contest/${s.problem.contestId}/problem/${s.problem.index}`,
-              time: new Date(s.creationTimeSeconds * 1000)
-            });
-          }
-          return acc;
-        }, [])
-        .slice(0, 8);
-      setProblems(accepted);
-    } catch (err) {
-      console.error('Failed to fetch CF submissions');
-    } finally {
+    if (!cfHandle) {
       setLoading(false);
+      return;
     }
-  };
+    const fetchData = async () => {
+      try {
+        const res = await axios.get(
+          `https://codeforces.com/api/user.status?handle=${cfHandle}&from=1&count=10`
+        );
+        const accepted = res.data.result
+          .filter(s => s.verdict === 'OK')
+          .reduce((acc, s) => {
+            const key = `${s.problem.contestId}-${s.problem.index}`;
+            if (!acc.find(p => p.key === key)) {
+              acc.push({
+                key,
+                name: s.problem.name,
+                rating: s.problem.rating,
+                tags: s.problem.tags,
+                url: `https://codeforces.com/contest/${s.problem.contestId}/problem/${s.problem.index}`,
+                time: new Date(s.creationTimeSeconds * 1000)
+              });
+            }
+            return acc;
+          }, [])
+          .slice(0, 8);
+        setProblems(accepted);
+      } catch (err) {
+        console.error('Failed to fetch CF submissions');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [cfHandle]);
 
   const timeAgo = (date) => {
     const diff = Date.now() - date;
