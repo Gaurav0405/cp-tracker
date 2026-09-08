@@ -6,6 +6,7 @@ export default function RecentSolved({ cfHandle }) {
   const [problems, setProblems] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (cfHandle) fetchRecentSolved();
     else setLoading(false);
