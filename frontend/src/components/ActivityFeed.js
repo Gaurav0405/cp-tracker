@@ -4,7 +4,6 @@ export default function ActivityFeed({ stats, recommendations }) {
   if (!stats) return null;
 
   const activities = [];
-  const now = new Date();
 
   if (stats.stats && stats.stats.leetcode) {
     const lc = stats.stats.leetcode;
