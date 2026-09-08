@@ -9,7 +9,6 @@ export default function WeeklyProgress({ stats, recommendations }) {
   startOfWeek.setDate(today.getDate() - dayOfWeek);
 
   const daysActive = stats.streak ? Math.min(stats.streak, 7) : 0;
-  const weeklyTarget = 35;
   const weeklyProgress = Math.min((daysActive / 7) * 100, 100);
 
   const todaySolved = recommendations
