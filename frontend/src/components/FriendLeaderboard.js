@@ -11,6 +11,7 @@ export default function FriendLeaderboard() {
   const [searching, setSearching] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchLeaderboard();
   }, []);
