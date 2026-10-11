@@ -47,12 +47,8 @@ export const AuthProvider = ({ children }) => {
 
   const loginWithGoogle = async () => {
     const result = await signInWithPopup(auth, googleProvider);
-    const { displayName, email } = result.user;
-    const res = await api.post('/auth/google', {
-      googleId: result.user.uid,
-      email,
-      name: displayName
-    });
+    const idToken = await result.user.getIdToken();
+    const res = await api.post('/auth/google', { idToken });
     localStorage.setItem('token', res.data.token);
     localStorage.setItem('user', JSON.stringify(res.data.user));
     setUser(res.data.user);
