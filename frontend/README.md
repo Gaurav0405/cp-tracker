@@ -1,70 +1,142 @@
-# Getting Started with Create React App
+# CP-Tracker Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+The frontend for [CP-Tracker](https://buildmyresumes.online), a competitive programming progress dashboard. It is a React single-page application that lets users connect coding-platform handles, review aggregated statistics, explore daily problem recommendations, and share profile pages.
+
+- **Live application:** https://buildmyresumes.online
+- **Repository:** https://github.com/Gaurav0405/cp-tracker
+- **Main project documentation:** [../README.md](../README.md)
+
+## Features
+
+- **Landing and authentication pages:** registration, login, and Google sign-in.
+- **Protected dashboard and profile:** authenticated users can view their dashboard and manage their connected platform handles.
+- **Multi-platform statistics:** dashboard views for statistics retrieved from LeetCode, Codeforces, CodeChef, GeeksforGeeks, HackerRank, and HackerEarth.
+- **Problem recommendations:** displays the backend's daily recommendations and lets users mark recommendations as solved.
+- **Progress visualizations:** difficulty breakdowns, weekly progress, recent solved activity, and contest-related UI components.
+- **Problem search and social views:** problem search, friend leaderboard/activity components, and public profiles at `/u/:username`.
+- **Theme switching and notifications:** dark/light theme preference and toast feedback for user actions.
+
+The frontend presents data returned by the backend; platform coverage and results depend on the backend integrations and availability of external services. Recommendation generation is implemented by the backend.
+
+## Tech Stack
+
+- React with Create React App (`react-scripts`)
+- React Router for client-side routes
+- Axios for HTTP requests
+- TanStack Query
+- Recharts for charts
+- Framer Motion for animations
+- Firebase Authentication for Google sign-in
+- React Icons and React Hot Toast
+
+## Routes
+
+| Path | Access | Purpose |
+| --- | --- | --- |
+| `/` | Public | Landing page |
+| `/login` | Public | Sign in |
+| `/register` | Public | Create an account |
+| `/dashboard` | Authenticated | Statistics and daily recommendations |
+| `/profile` | Authenticated | User profile and coding-platform handles |
+| `/u/:username` | Public | Public profile |
+
+The app uses a client-side `PrivateRoute` for the dashboard and private profile page. API authorization is handled separately by the backend.
+
+## Requirements
+
+- Node.js and npm
+- The CP-Tracker backend running locally or a reachable deployed backend
+- Firebase project configuration if you want Google sign-in to work in your own setup
+
+## Run Locally
+
+From the repository root:
+
+```bash
+cd frontend
+npm ci
+npm start
+```
+
+The Create React App development server normally opens at [http://localhost:3000](http://localhost:3000).
+
+The current API client selects its base URL based on the browser hostname:
+
+- When the hostname is `localhost`, requests go to `http://localhost:5000/api`.
+- For other hostnames, requests go to `https://cp-tracker-backend-4nrv.onrender.com/api`.
+
+Make sure the backend is running on port `5000` for local development. If you change the backend location, update `src/utils/api.js` deliberately and verify the production routing before deploying.
+
+> **Configuration note:** `.env.production` currently contains `REACT_APP_API_URL=/api`, but the current Axios client does not read that variable. Do not assume changing it changes the API destination. The API URL is currently selected in `src/utils/api.js`.
+
+## Google Sign-In Configuration
+
+Google sign-in is implemented with Firebase Authentication in `src/utils/firebase.js` and is exchanged with the CP-Tracker backend through `/api/auth/google`.
+
+For your own deployment:
+
+1. Configure a Firebase project and enable the Google sign-in provider.
+2. Set the correct authorized domains in Firebase Authentication.
+3. Configure the frontend with the Firebase web-app settings for your project.
+4. Ensure the backend accepts the matching Google sign-in flow.
+
+The Firebase web configuration is client-side configuration, not a server-side secret. Apply appropriate API-key restrictions and configure Firebase security rules for any Firebase services you use. Never put backend secrets, database credentials, JWT secrets, or email passwords in frontend code.
 
 ## Available Scripts
 
-In the project directory, you can run:
+Run these commands from `frontend/`:
 
-### `npm start`
+| Command | Description |
+| --- | --- |
+| `npm start` | Start the local development server |
+| `npm test` | Run the Create React App test runner in watch mode |
+| `npm run build` | Create an optimized production build in `build/` |
+| `npm run eject` | Eject from Create React App configuration (one-way operation; normally unnecessary) |
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## Build for Production
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+```bash
+npm ci
+npm run build
+```
 
-### `npm test`
+The optimized static assets are written to `frontend/build/`. Deploy these assets using the hosting configuration for your environment. Client-side routing may require the host to serve `index.html` as a fallback for application routes.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+The repository's current GitHub Actions workflow describes an EC2/SSH deployment, while the application has been associated with Vercel (frontend) and Render (backend). Confirm the actual hosting configuration before relying on that workflow; this README does not change deployment settings.
 
-### `npm run build`
+## Project Structure
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+```text
+frontend/
+├── public/                 # Static assets and HTML template
+├── src/
+│   ├── components/         # Dashboard, chart, activity, and social UI
+│   ├── context/
+│   │   └── AuthContext.js  # Authentication state and theme
+│   ├── pages/              # Landing, login, register, dashboard, profiles
+│   ├── utils/
+│   │   ├── api.js          # Axios client and bearer-token header
+│   │   └── firebase.js     # Firebase Authentication setup
+│   ├── App.js              # Routes and protected-route wrapper
+│   └── index.js            # React entry point
+├── package.json
+└── package-lock.json
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## Authentication and API Requests
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+The Axios client in `src/utils/api.js` attaches the token stored in browser `localStorage` as an `Authorization: Bearer <token>` header when a token is present. Login and registration are handled through the backend; Google sign-in uses Firebase and then sends the resulting identity information to the backend.
 
-### `npm run eject`
+Client-side route protection improves the user experience, but it is not a substitute for server-side authorization. The backend must validate tokens and protect user-specific endpoints.
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+## Troubleshooting
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+- **API requests fail locally:** check that the backend is running at `http://localhost:5000` and that its CORS configuration permits the local frontend origin.
+- **API requests go to the wrong server:** inspect `src/utils/api.js`; the current client uses a hostname check rather than `REACT_APP_API_URL`.
+- **Google sign-in fails:** verify Firebase provider settings, authorized domains, and the backend's Google authentication endpoint.
+- **A direct link to a profile returns a hosting 404:** configure the production host to route client-side paths back to `index.html`.
+- **Build or dependency issues:** use the committed lockfile with `npm ci`, and check the Node.js version supported by the installed dependencies.
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## Maintainer
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+**Gaurav Jain** · [GitHub](https://github.com/Gaurav0405) · [LinkedIn](https://www.linkedin.com/in/gaurav-jain-b5b249278/)
